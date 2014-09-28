@@ -2,5 +2,7 @@
 
 FactoryGirl.define do
   factory :user do
+    name "John"
+    last_access  DateTime.now
   end
 end
