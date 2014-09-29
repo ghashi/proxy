@@ -2,7 +2,9 @@
 
 FactoryGirl.define do
   factory :user do
-    name "John"
+    name         "John"
     last_access  DateTime.now
+    ip          "192.168.19.2"
+    next_hop    "192.168.19.2"
   end
 end
