@@ -1,6 +1,6 @@
 Rails.application.routes.draw do
   resources :users
-  get 'redirect/:site' => 'redirect#get', site: /.+/, format: false, as: 'get'
+  post '/redirect' => 'api/v1/users#redirect'
 
   # The priority is based upon order of creation: first created -> highest priority.
   # See how all your routes lay out with "rake routes".
