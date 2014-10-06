@@ -6,18 +6,33 @@
 </p>
 
 <p>
-  <strong>IP</strong>
+  <strong>Remaining data:</strong>
+  <%= @user.remaining_data %>
+</p>
+
+<p>
+  <strong>Ip:</strong>
   <%= @user.ip %>
 </p>
 
 <p>
-  <strong>Next hop</strong>
+  <strong>Next hop:</strong>
   <%= @user.next_hop %>
 </p>
 
 <p>
-  <strong>Last access:</strong>
-  <%= @user.last_access %>
+  <strong>Session key:</strong>
+  <%= @user.session_key %>
+</p>
+
+<p>
+  <strong>Nonce:</strong>
+  <%= @user.nonce %>
+</p>
+
+<p>
+  <strong>Timestamp:</strong>
+  <%= @user.timestamp %>
 </p>
 
 <%= link_to 'Edit', edit_user_path(@user) %> |

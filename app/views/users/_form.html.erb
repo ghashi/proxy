@@ -16,6 +16,10 @@
     <%= f.text_field :name %>
   </div>
   <div class="field">
+    <%= f.label :remaining_data %><br>
+    <%= f.number_field :remaining_data %>
+  </div>
+  <div class="field">
     <%= f.label :ip %><br>
     <%= f.text_field :ip %>
   </div>
@@ -24,8 +28,16 @@
     <%= f.text_field :next_hop %>
   </div>
   <div class="field">
-    <%= f.label :last_access %><br>
-    <%= f.datetime_select :last_access %>
+    <%= f.label :session_key %><br>
+    <%= f.text_field :session_key %>
+  </div>
+  <div class="field">
+    <%= f.label :nonce %><br>
+    <%= f.number_field :nonce %>
+  </div>
+  <div class="field">
+    <%= f.label :timestamp %><br>
+    <%= f.datetime_select :timestamp %>
   </div>
   <div class="actions">
     <%= f.submit %>

@@ -4,9 +4,12 @@
   <thead>
     <tr>
       <th>Name</th>
-      <th>IP</th>
+      <th>Remaining data</th>
+      <th>Ip</th>
       <th>Next hop</th>
-      <th>Last access</th>
+      <th>Session key</th>
+      <th>Nonce</th>
+      <th>Timestamp</th>
       <th colspan="3"></th>
     </tr>
   </thead>
@@ -15,9 +18,12 @@
     <% @users.each do |user| %>
       <tr>
         <td><%= user.name %></td>
+        <td><%= user.remaining_data %></td>
         <td><%= user.ip %></td>
         <td><%= user.next_hop %></td>
-        <td><%= user.last_access %></td>
+        <td><%= user.session_key %></td>
+        <td><%= user.nonce %></td>
+        <td><%= user.timestamp %></td>
         <td><%= link_to 'Show', user %></td>
         <td><%= link_to 'Edit', edit_user_path(user) %></td>
         <td><%= link_to 'Destroy', user, method: :delete, data: { confirm: 'Are you sure?' } %></td>

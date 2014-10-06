@@ -1,1 +1,1 @@
-json.extract! @user, :id, :name, :ip, :next_hop, :last_access, :created_at, :updated_at
+json.extract! @user, :id, :name, :remaining_data, :ip, :next_hop, :session_key, :nonce, :timestamp, :created_at, :updated_at

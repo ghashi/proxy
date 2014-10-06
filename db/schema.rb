@@ -11,15 +11,18 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20140928052416) do
+ActiveRecord::Schema.define(version: 20141006005826) do
 
   create_table "users", force: true do |t|
     t.string   "name"
-    t.datetime "last_access"
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.integer  "remaining_data"
     t.string   "ip"
     t.string   "next_hop"
+    t.string   "session_key"
+    t.integer  "nonce"
+    t.datetime "timestamp"
+    t.datetime "created_at"
+    t.datetime "updated_at"
   end
 
 end
