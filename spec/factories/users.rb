@@ -3,10 +3,10 @@
 FactoryGirl.define do
   factory :user do
     name "MyString"
-    remaining_data 1
+    remaining_data 1000
     ip "MyString"
     next_hop "MyString"
-    session_key "MyString"
+    session_key "12345"
     nonce 1
     timestamp "2014-10-05 21:58:26"
   end
