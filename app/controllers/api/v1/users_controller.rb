@@ -14,6 +14,33 @@ class Api::V1::UsersController < ApplicationController
     end
   end
 
+  def login
+    begin
+      user = User.find(params[:id])
+
+      formatted_params = {
+        url: "#{ENV["AAAS_URL"]}/login",
+        method: "POST",
+        params: params
+      }
+      res = make_request_with formatted_params
+
+      user.nonce = SecureRandom.hex(4)
+      user.timestamp = DateTime.now
+      user.session_key = res.body["session_key"]
+
+      if user.save
+        e = CryptoWrapper.encrypt(user.nonce, user.session_key)
+        render json: {nonce: e}
+      else
+        head :bad_request
+      end
+    rescue Exception => e
+      puts e.message
+      head :bad_request
+    end
+  end
+
   private
 
   def get_decrypted_params(session_key, params)
