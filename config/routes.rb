@@ -2,6 +2,7 @@ Rails.application.routes.draw do
   resources :users
   post '/redirect' => 'api/v1/users#redirect'
   post '/login' => 'api/v1/users#login'
+  post '/checklogin' => 'api/v1/users#checklogin'
 
   # The priority is based upon order of creation: first created -> highest priority.
   # See how all your routes lay out with "rake routes".

@@ -41,6 +41,17 @@ class Api::V1::UsersController < ApplicationController
     end
   end
 
+  def checklogin
+    begin
+      user = User.find(params[:id])
+      e = CryptoWrapper.encrypt(user.nonce + 1, user.session_key)
+      render json: {checklogin: e == params[:nonce]}
+    rescue Exception => e
+      puts e.message
+      head :bad_request
+    end
+  end
+
   private
 
   def get_decrypted_params(session_key, params)

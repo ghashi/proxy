@@ -5,6 +5,15 @@ describe Api::V1::UsersController, type: :controller do
   let(:user) {FactoryGirl.create(:user)}
   let(:requester) {Net::HTTP}
 
+  describe "POST #check_login" do
+    it "should verify received nonce" do
+      allow(CryptoWrapper).to receive(:encrypt).and_return("2")
+      logged_user = FactoryGirl.create(:user, nonce: 1, timestamp: DateTime.now)
+      post :checklogin, id: logged_user.id, nonce: "2"
+      expect(response.body).to eq({checklogin: true}.to_json)
+    end
+  end
+
   describe "POST #login" do
     let(:request_response) do
       response = {}
