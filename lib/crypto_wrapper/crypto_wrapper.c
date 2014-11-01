@@ -2,12 +2,36 @@
 #include "util.h"
 #include "aes_128.h"
 #include "mss.h"
+#include "hmac.h"
 
 static VALUE t_init(VALUE self){
   return self;
 }
 
 static VALUE t_verify_hmac(){
+}
+
+static VALUE t_get_hmac(VALUE self, VALUE r_session_key, VALUE r_msg){
+  unsigned char *session_key;
+  unsigned int  session_key_len;
+  unsigned char *msg;
+  unsigned int  msg_len;
+  unsigned char tag[HMAC_TAG_SIZE];
+  VALUE str;
+
+  // convert VALUE to string
+  str = StringValue(r_session_key);
+  session_key = RSTRING_PTR(str);
+  session_key_len = RSTRING_LEN(str);
+  str = StringValue(r_msg);
+  msg = RSTRING_PTR(str);
+  msg_len = RSTRING_LEN(str);
+
+  base64decode(session_key, session_key_len, session_key, &session_key_len);
+
+  get_hmac(msg, session_key, tag);
+
+  return rb_str_new2(tag);
 }
 
 static VALUE t_symmetric_decrypt(VALUE self, VALUE session_key, VALUE msg ){
@@ -18,7 +42,6 @@ static VALUE t_symmetric_decrypt(VALUE self, VALUE session_key, VALUE msg ){
   unsigned int  key_len;
   unsigned int  buffer[300];
   VALUE str;
-  int i;
 
   // convert VALUE to string
   str = StringValue(msg);
@@ -60,6 +83,7 @@ void Init_crypto_wrapper() {
   cCryptoWrapper = rb_define_class("CryptoWrapper", rb_cObject);
   rb_define_method(cCryptoWrapper, "initialize", t_init, 0);
   rb_define_singleton_method(cCryptoWrapper, "verify_hmac", t_verify_hmac, 0);
+  rb_define_singleton_method(cCryptoWrapper, "get_hmac", t_get_hmac, 2);
   rb_define_singleton_method(cCryptoWrapper, "symmetric_encrypt", t_symmetric_encrypt, 2);
   rb_define_singleton_method(cCryptoWrapper, "symmetric_decrypt", t_symmetric_decrypt, 2);
 }

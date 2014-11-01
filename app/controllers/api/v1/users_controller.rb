@@ -5,8 +5,13 @@ class Api::V1::UsersController < ApplicationController
     begin
       user = User.find(params[:id])
       decrypted_params = get_decrypted_params user.session_key, params[:msg]
+
+      tag = CryptoWrapper.get_hmac(user.session_key, params[:msg])
+      p tag
+
       response = make_request_with decrypted_params
       update_remaining_data_of user, response
+
 
       render json: json_of(response, user)
     rescue
@@ -55,7 +60,7 @@ class Api::V1::UsersController < ApplicationController
   private
 
   def get_decrypted_params(session_key, params)
-      p CryptoWrapper.symmetric_decrypt(session_key, params)
+      CryptoWrapper.symmetric_decrypt(session_key, params)
   end
 
   def make_request_with(decrypted_params)
