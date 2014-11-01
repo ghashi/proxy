@@ -49,7 +49,8 @@ describe Api::V1::UsersController, type: :controller do
 
       it "should return get request response" do
         expect(requester).to receive(:get_response).with(URI.parse("http://en.wikipedia.org/wiki/Cassius_(band)")).and_return(request_response)
-        post :redirect, url: "http://en.wikipedia.org/wiki/Cassius_(band)", method: "get" , id: user.id, params: {}
+        #post :redirect, url: "http://en.wikipedia.org/wiki/Cassius_(band)", method: "get" , id: user.id, params: {}
+        post :redirect, id: user.id, msg: "8ZQ76jsSKr5V+fgvhIpSvH9OR83BF159bj3lTRlkyFV/Ax1Aq52F+f5q2usxVzKlBBmVIJ2f6ZSIlEXYOY9SdA=="
         expect(user.reload.remaining_data).to eq 999
       end
 

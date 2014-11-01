@@ -4,7 +4,7 @@ class Api::V1::UsersController < ApplicationController
   def redirect
     begin
       user = User.find(params[:id])
-      decrypted_params = get_decrypted_params user.session_key, params
+      decrypted_params = get_decrypted_params user.session_key, params[:msg]
       response = make_request_with decrypted_params
       update_remaining_data_of user, response
 
@@ -30,7 +30,7 @@ class Api::V1::UsersController < ApplicationController
       user.session_key = res.body["session_key"]
 
       if user.save
-        e = CryptoWrapper.encrypt(user.nonce, user.session_key)
+        e = CryptoWrapper.symmetric_encrypt(user.nonce, user.session_key)
         render json: {nonce: e}
       else
         head :bad_request
@@ -44,7 +44,7 @@ class Api::V1::UsersController < ApplicationController
   def checklogin
     begin
       user = User.find(params[:id])
-      e = CryptoWrapper.encrypt(user.nonce + 1, user.session_key)
+      e = CryptoWrapper.symmetric_encrypt(user.nonce + 1, user.session_key)
       render json: {checklogin: e == params[:nonce]}
     rescue Exception => e
       puts e.message
@@ -55,7 +55,7 @@ class Api::V1::UsersController < ApplicationController
   private
 
   def get_decrypted_params(session_key, params)
-      Decrypt.call(session_key, params)
+      p CryptoWrapper.symmetric_decrypt(session_key, params)
   end
 
   def make_request_with(decrypted_params)

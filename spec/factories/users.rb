@@ -6,7 +6,7 @@ FactoryGirl.define do
     remaining_data 1000
     ip "MyString"
     next_hop "MyString"
-    session_key "12345"
+    session_key "AAECAwQFBgcICQoLDA0ODw=="
     nonce 1
     timestamp "2014-10-05 21:58:26"
   end
