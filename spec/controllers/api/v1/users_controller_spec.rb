@@ -15,20 +15,21 @@ describe Api::V1::UsersController, type: :controller do
   end
 
   describe "POST #login" do
-    let(:request_response) do
+    let(:login_user) {FactoryGirl.create(:user, :session_key => "1")}
+    let!(:request_response) do
       response = {}
       def response.body
-        {"session_key" => "session_key"}.to_json
+        {"session_key" => "AAECAwQFBgcICQoLDA0ODw=="}
       end
       response
     end
 
     it "should redirect the login request and answer with e(n)" do
-      allow(CryptoWrapper).to receive(:encrypt).and_return(1)
+      allow(SecureRandom).to receive(:hex).and_return(7)
       expect(requester).to receive(:post_form).and_return(request_response)
-      post :login, id: user.id
-      expect(user.reload.session_key).to eq "session_key"
-      expect(response.body).to eq({"nonce" => 1}.to_json)
+      post :login, id: login_user.id
+      expect(login_user.reload.nonce).to eq 7
+      expect(response.body).to eq({"nonce" => "OOfeDLXfP8DGJOcR5f5Txw=="}.to_json)
     end
 
     it "should redirect the login request and answer with e(n)" do
