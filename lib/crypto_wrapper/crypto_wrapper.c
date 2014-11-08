@@ -10,15 +10,18 @@ static VALUE t_init(VALUE self){
   return self;
 }
 
-static VALUE t_verify_hmac(){
-}
-
-static VALUE t_get_hmac(VALUE self, VALUE r_session_key, VALUE r_msg){
+static VALUE t_verify_hmac(VALUE self, VALUE r_tag, VALUE r_msg, VALUE r_session_key){
   unsigned char *session_key;
   unsigned int  session_key_len;
   unsigned char *msg;
   unsigned int  msg_len;
-  unsigned char tag[HMAC_TAG_SIZE];
+  unsigned char *tag;
+  unsigned int  tag_len;
+  unsigned char res;
+  char *decoded_session_key;
+  int decoded_session_key_len;
+  char *decoded_tag;
+  int decoded_tag_len;
   VALUE str;
 
   // convert VALUE to string
@@ -28,12 +31,56 @@ static VALUE t_get_hmac(VALUE self, VALUE r_session_key, VALUE r_msg){
   str = StringValue(r_msg);
   msg = RSTRING_PTR(str);
   msg_len = RSTRING_LEN(str);
+  str = StringValue(r_tag);
+  tag = RSTRING_PTR(str);
+  tag_len = RSTRING_LEN(str);
 
-  base64decode(session_key, session_key_len, session_key, &session_key_len);
+  decoded_session_key = malloc(session_key_len);
+  decoded_session_key_len = session_key_len;
+  decoded_tag = malloc(tag_len);
+  decoded_tag_len = tag_len;
 
-  get_hmac(msg, session_key, tag);
+  base64decode(session_key, session_key_len, decoded_session_key, &decoded_session_key_len);
+  base64decode(tag, tag_len, decoded_tag, &decoded_tag_len);
 
-  return rb_str_new2(tag);
+  res = verify_hmac( decoded_tag, msg, decoded_session_key);
+
+  free(decoded_session_key);
+  free(decoded_tag);
+
+  if(res) return Qtrue;
+  return Qfalse;
+}
+
+static VALUE t_get_hmac(VALUE self, VALUE r_session_key, VALUE r_msg){
+  unsigned char *session_key;
+  unsigned int  session_key_len;
+  unsigned char *msg;
+  unsigned int  msg_len;
+  unsigned char tag[HMAC_TAG_SIZE];
+  VALUE str;
+  unsigned int  buffer[BUFFER_SIZE];
+  char *decoded_session_key;
+  int decoded_session_key_len;
+
+  // convert VALUE to string
+  str = StringValue(r_session_key);
+  session_key = RSTRING_PTR(str);
+  session_key_len = RSTRING_LEN(str);
+  str = StringValue(r_msg);
+  msg = RSTRING_PTR(str);
+  msg_len = RSTRING_LEN(str);
+
+  decoded_session_key = malloc(session_key_len);
+  decoded_session_key_len = session_key_len;
+
+  base64decode(session_key, session_key_len, decoded_session_key, &decoded_session_key_len);
+
+  get_hmac(msg, decoded_session_key, tag);
+
+  base64encode(tag, HMAC_TAG_SIZE, buffer, BUFFER_SIZE);
+
+  return rb_str_new2(buffer);
 }
 
 static VALUE t_symmetric_decrypt(VALUE self, VALUE session_key, VALUE msg ){
@@ -44,6 +91,10 @@ static VALUE t_symmetric_decrypt(VALUE self, VALUE session_key, VALUE msg ){
   unsigned int  key_len;
   unsigned int  buffer[BUFFER_SIZE];
   VALUE str;
+  unsigned char *decoded_key;
+  unsigned int  decoded_key_len;
+  unsigned char *decoded_ciphertext;
+  unsigned int  decoded_ciphertext_len;
 
   // convert VALUE to string
   str = StringValue(msg);
@@ -53,11 +104,18 @@ static VALUE t_symmetric_decrypt(VALUE self, VALUE session_key, VALUE msg ){
   key = RSTRING_PTR(str);
   key_len = RSTRING_LEN(str);
 
-  // converter BASE64 para BYTE
-  base64decode(ciphertext, ciphertext_len, ciphertext, &ciphertext_len);
-  base64decode(key, key_len, key, &key_len);
+  decoded_ciphertext = malloc(ciphertext_len);
+  decoded_ciphertext_len = ciphertext_len;
+  decoded_key        = malloc(key_len);
+  decoded_key_len    = key_len;
 
-  aes_128_cbc_decrypt(key, iv, ciphertext, ciphertext_len, buffer);
+  base64decode(ciphertext, ciphertext_len, decoded_ciphertext, &decoded_ciphertext_len);
+  base64decode(key, key_len, decoded_key, &decoded_key_len);
+
+  aes_128_cbc_decrypt(decoded_key, iv, decoded_ciphertext, decoded_ciphertext_len, buffer);
+
+  free(decoded_key);
+  free(decoded_ciphertext);
 
   return rb_str_new2(buffer);
 }
@@ -71,21 +129,25 @@ static VALUE t_symmetric_encrypt(VALUE self, VALUE nonce, VALUE session_key ){
   unsigned int  ciphertext_len;
   unsigned char  buffer[BUFFER_SIZE];
   VALUE str;
+  unsigned char *decoded_key;
+  unsigned int   decoded_key_len;
 
   str = StringValue(nonce);
   plaintext = RSTRING_PTR(str);
   str = StringValue(session_key);
   key = RSTRING_PTR(str);
   key_len = RSTRING_LEN(str);
+  memset(ciphertext, 0, BUFFER_SIZE);
+  memset(buffer, 0, BUFFER_SIZE);
 
-  base64decode(key, key_len, key, &key_len);
+  decoded_key = malloc(key_len);
+  decoded_key_len = key_len;
 
-  aes_128_cbc_encrypt(
-      key,
-      iv,
-      plaintext,
-      ciphertext,
-      &ciphertext_len);
+  base64decode(key, key_len, decoded_key, &decoded_key_len);
+
+  aes_128_cbc_encrypt(decoded_key, iv, plaintext, ciphertext, &ciphertext_len);
+
+  free(decoded_key);
 
   base64encode(ciphertext, ciphertext_len, buffer, BUFFER_SIZE);
 
@@ -97,7 +159,7 @@ VALUE cCryptoWrapper;
 void Init_crypto_wrapper() {
   cCryptoWrapper = rb_define_class("CryptoWrapper", rb_cObject);
   rb_define_method(cCryptoWrapper, "initialize", t_init, 0);
-  rb_define_singleton_method(cCryptoWrapper, "verify_hmac", t_verify_hmac, 0);
+  rb_define_singleton_method(cCryptoWrapper, "verify_hmac", t_verify_hmac, 3);
   rb_define_singleton_method(cCryptoWrapper, "get_hmac", t_get_hmac, 2);
   rb_define_singleton_method(cCryptoWrapper, "symmetric_encrypt", t_symmetric_encrypt, 2);
   rb_define_singleton_method(cCryptoWrapper, "symmetric_decrypt", t_symmetric_decrypt, 2);
