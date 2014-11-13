@@ -1,6 +1,9 @@
 require 'net/http'
+require_relative '../../../../lib/crypto_wrapper/crypto_wrapper.so'
 
 class Api::V1::UsersController < ApplicationController
+  skip_before_filter  :verify_authenticity_token
+
   def redirect
     begin
       user = User.find(params[:id])

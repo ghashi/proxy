@@ -4,7 +4,7 @@
 #include "mss.h"
 #include "hmac.h"
 
-#define BUFFER_SIZE 300
+#define BUFFER_SIZE 300000
 
 static VALUE t_init(VALUE self){
   return self;
@@ -59,7 +59,7 @@ static VALUE t_get_hmac(VALUE self, VALUE r_session_key, VALUE r_msg){
   unsigned int  msg_len;
   unsigned char tag[HMAC_TAG_SIZE];
   VALUE str;
-  unsigned int  buffer[BUFFER_SIZE];
+  unsigned char *buffer;
   char *decoded_session_key;
   int decoded_session_key_len;
 
@@ -78,9 +78,12 @@ static VALUE t_get_hmac(VALUE self, VALUE r_session_key, VALUE r_msg){
 
   get_hmac(msg, decoded_session_key, tag);
 
+  buffer = malloc(2 * HMAC_TAG_SIZE);
   base64encode(tag, HMAC_TAG_SIZE, buffer, BUFFER_SIZE);
+  str = rb_str_new2(buffer);
+  free(buffer);
 
-  return rb_str_new2(buffer);
+  return str;
 }
 
 static VALUE t_symmetric_decrypt(VALUE self, VALUE session_key, VALUE msg ){
@@ -89,7 +92,7 @@ static VALUE t_symmetric_decrypt(VALUE self, VALUE session_key, VALUE msg ){
   unsigned char *ciphertext;
   unsigned int  ciphertext_len;
   unsigned int  key_len;
-  unsigned int  buffer[BUFFER_SIZE];
+  unsigned int  *buffer[BUFFER_SIZE];
   VALUE str;
   unsigned char *decoded_key;
   unsigned int  decoded_key_len;
@@ -127,7 +130,7 @@ static VALUE t_symmetric_encrypt(VALUE self, VALUE nonce, VALUE session_key ){
   unsigned int  key_len;
   unsigned char ciphertext[BUFFER_SIZE];
   unsigned int  ciphertext_len;
-  unsigned char  buffer[BUFFER_SIZE];
+  unsigned char  *buffer;
   VALUE str;
   unsigned char *decoded_key;
   unsigned int   decoded_key_len;
@@ -138,7 +141,6 @@ static VALUE t_symmetric_encrypt(VALUE self, VALUE nonce, VALUE session_key ){
   key = RSTRING_PTR(str);
   key_len = RSTRING_LEN(str);
   memset(ciphertext, 0, BUFFER_SIZE);
-  memset(buffer, 0, BUFFER_SIZE);
 
   decoded_key = malloc(key_len);
   decoded_key_len = key_len;
@@ -148,10 +150,16 @@ static VALUE t_symmetric_encrypt(VALUE self, VALUE nonce, VALUE session_key ){
   aes_128_cbc_encrypt(decoded_key, iv, plaintext, ciphertext, &ciphertext_len);
 
   free(decoded_key);
+  buffer = malloc(2 * ciphertext_len);
+  memset(buffer, 0, 2 * ciphertext_len);
 
-  base64encode(ciphertext, ciphertext_len, buffer, BUFFER_SIZE);
+  base64encode(ciphertext, ciphertext_len, buffer, 2 * ciphertext_len);
 
-  return rb_str_new2(buffer);
+  str = rb_str_new2(buffer);
+
+  free(buffer);
+
+  return str;
 }
 
 VALUE cCryptoWrapper;
