@@ -24,15 +24,14 @@ class Api::V1::UsersController < ApplicationController
 
   def login
     begin
-      user = User.find(params[:id])
-
       formatted_params = {
-       "url" => "#{ENV["AAAS_URL"]}/login",
+        "url" => "#{Rails.application.secrets["AAAS_URL"]}/login",
        "method" => "POST",
        "params" => params
       }
       res = make_request_with formatted_params
 
+      user = User.find(params[:id])
       user.nonce = SecureRandom.hex(4)
       user.timestamp = DateTime.now
       user.session_key = res.body["session_key"]
@@ -44,6 +43,10 @@ class Api::V1::UsersController < ApplicationController
       else
         head :bad_request
       end
+    rescue ActiveRecord::RecordNotFound => e
+      puts "*****************************user not found"
+      puts e.message
+      render json: {error: "user not found"}
     rescue Exception => e
       puts e.message
       head :bad_request
