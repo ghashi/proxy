@@ -1,5 +1,6 @@
 require 'net/http'
 require_relative '../../../../lib/crypto_wrapper/crypto_wrapper.so'
+require_relative '../../../../lib/services/get_ip'
 
 class Api::V1::UsersController < ApplicationController
   skip_before_filter  :verify_authenticity_token
@@ -29,12 +30,18 @@ class Api::V1::UsersController < ApplicationController
        "method" => "POST",
        "params" => params
       }
-      res = make_request_with formatted_params
 
-      user = User.find(params[:id])
+      res = make_request_with formatted_params
+      res_json = ActiveSupport::JSON.decode(res.body)
+
+      user = User.where(id: params[:id]).first_or_create
+      user.name = res_json["cname"]
+      user.next_hop = request.remote_ip
+      user.ip = params[:supplicant] == "gateway" ? request.remote_ip : GetIp.call
       user.nonce = SecureRandom.hex(4)
       user.timestamp = DateTime.now
-      user.session_key = res.body["session_key"]
+      user.remaining_data = 10000000
+      user.session_key = res_json["session_key"]
 
       if user.save
         nonce = symmetric_encrypt(user.nonce, user.session_key)
