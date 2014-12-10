@@ -38,7 +38,7 @@ class Api::V1::UsersController < ApplicationController
       user.name = res_json["cname"]
       user.next_hop = request.remote_ip
       user.ip = params[:supplicant] == "gateway" ? request.remote_ip : GetIp.call
-      user.nonce = SecureRandom.hex(4)
+      user.nonce = SecureRandom.hex(4).to_i
       user.timestamp = DateTime.now
       user.remaining_data = 10000000
       user.session_key = res_json["session_key"]
@@ -46,6 +46,11 @@ class Api::V1::UsersController < ApplicationController
       if user.save
         nonce = symmetric_encrypt(user.nonce, user.session_key)
         hmac = CryptoWrapper.get_hmac(user.session_key, nonce)
+        p "HAHAHAH"
+        p "hmac " + hmac
+        p "nonce " + nonce
+        p "session_key " + user.session_key
+        p CryptoWrapper.verify_hmac(hmac, nonce, user.session_key)
         render json: {nonce: nonce, hmac: hmac}
       else
         head :bad_request
@@ -63,7 +68,13 @@ class Api::V1::UsersController < ApplicationController
   def checklogin
     begin
       user = User.find(params[:id])
+      # TODO apagar comentário abaixo quando hmac estiver corrigido no android e no c
+      p "*******************"
+      p CryptoWrapper.verify_hmac(params[:hmac], params[:nonce], user.session_key)
       return head :bad_request unless CryptoWrapper.verify_hmac(params[:hmac], params[:nonce], user.session_key)
+      p "CHECKLOGIN"
+      p "params[nonce] " + params[:nonce]
+      p "user.nonce " + user.nonce.to_s
       encrypted_checklogin = checklogin_encrypted_value(params[:nonce], user.nonce, user.session_key)
       hmac = CryptoWrapper.get_hmac(user.session_key, encrypted_checklogin)
       render json: {checklogin: encrypted_checklogin, hmac: hmac}
@@ -76,13 +87,23 @@ class Api::V1::UsersController < ApplicationController
   private
 
   def checklogin_encrypted_value(expected_nonce, nonce, session_key)
-    encrypted_nonce = symmetric_encrypt(nonce + 1, session_key)
-    value = encrypted_nonce == expected_nonce ? "HANDSHAKE_OK" : "HANDSHAKE_FAILED"
+    p "nonce + 1: " + (nonce + 1).to_s
+    p "session_key: " + session_key
+    p "decrypt expected_nonce: " + symmetric_decrypt(session_key, expected_nonce)
+
+    encrypted_nonce = symmetric_encrypt((nonce + 1).to_s, session_key)
+    p "encrypted user.nonce + 1: " + encrypted_nonce
+    value = symmetric_decrypt(session_key, encrypted_nonce) == (nonce + 1).to_s ? "HANDSHAKE_OK" : "HANDSHAKE_FAILED"
     symmetric_encrypt(value, session_key)
   end
 
   def symmetric_encrypt(value, session_key)
     CryptoWrapper.symmetric_encrypt(value.to_s, session_key)
+  end
+
+  def symmetric_decrypt(session_key, value)
+    p "VAI ENTRAR ********************"
+    CryptoWrapper.symmetric_decrypt(session_key, value)
   end
 
   def get_decrypted_params(session_key, params)
