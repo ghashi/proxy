@@ -8,15 +8,22 @@ class Api::V1::UsersController < ApplicationController
   def redirect
     begin
       user = User.find(params[:id])
-      p params[:hmac]
-      p params[:request]
-      p user.session_key
-      p CryptoWrapper.verify_hmac(params[:hmac], params[:request], user.session_key)
+
+      logger.debug "Api::V1::UsersController.redirect\n
+at=CryptoWrapper.verify_hmac\n
+hmac=#{params[:hmac]}\n
+request=#{params[:request]}\n
+user.session_key=#{user.session_key}\n
+result=#{CryptoWrapper.verify_hmac(params[:hmac], params[:request], user.session_key)}"
+
       return head :bad_request unless CryptoWrapper.verify_hmac(params[:hmac], params[:request], user.session_key)
-      p "teste(((((((((((((((((((7"
-      p params[:request]
       decrypted_params = get_decrypted_params user.session_key, params[:request]
-      p "teste(((((((((((((((((((8"
+
+      logger.debug "Api::V1::UsersController.redirect\n
+at=get_decrypted_params\n
+user.session_key=#{user.session_key}\n
+request=#{params[:request]}\n
+result=#{decrypted_params}"
 
       response = make_request_with decrypted_params
       update_remaining_data_of user, response
@@ -24,12 +31,9 @@ class Api::V1::UsersController < ApplicationController
       #encrypted_response = (ActiveSupport::JSON.encode({remaining_data: user.remaining_data, content: Base64.encode64(response.body)}))
       hmac = CryptoWrapper.get_hmac(user.session_key, encrypted_response)
 
-      p "teste(((((((((((((((((((9"
       render json: {response: encrypted_response, hmac: hmac}
     rescue  Exception => e
-      p "DEU RUIM(((((((((((((((((((9"
-      puts e.message
-      p "DEU RUIM(((((((((((((((((((9"
+      logger.error e.message
       head :bad_request
     end
   end
@@ -57,21 +61,24 @@ class Api::V1::UsersController < ApplicationController
       if user.save
         nonce = symmetric_encrypt(user.nonce, user.session_key)
         hmac = CryptoWrapper.get_hmac(user.session_key, nonce)
-        p "HAHAHAH"
-        p "hmac " + hmac
-        p "nonce " + nonce
-        p "session_key " + user.session_key
-        p CryptoWrapper.verify_hmac(hmac, nonce, user.session_key)
+
+        logger.debug "Api::V1::UsersController.login\n
+at=CryptoWrapper.verify_hmac\n
+hmac=#{hmac}\n
+nonce=#{nonce}\n
+user.session_key=#{user.session_key}\n
+result=#{CryptoWrapper.verify_hmac(hmac, nonce, user.session_key)}"
+
         render json: {nonce: nonce, hmac: hmac}
       else
         head :bad_request
       end
     rescue ActiveRecord::RecordNotFound => e
-      puts "*****************************user not found"
-      puts e.message
+      logger.error "Api::V1::UsersController.login when=ActiveRecord::RecordNotFound message=#{e.message}"
       render json: {error: "user not found"}
     rescue Exception => e
-      puts e.message
+      logger.error "Api::V1::UsersController.login when=Exception message=#{e.message}"
+      logger.error e.message
       head :bad_request
     end
   end
@@ -79,18 +86,17 @@ class Api::V1::UsersController < ApplicationController
   def checklogin
     begin
       user = User.find(params[:id])
-      # TODO apagar comentário abaixo quando hmac estiver corrigido no android e no c
-      p "*******************"
-      p CryptoWrapper.verify_hmac(params[:hmac], params[:nonce], user.session_key)
       return head :bad_request unless CryptoWrapper.verify_hmac(params[:hmac], params[:nonce], user.session_key)
-      p "CHECKLOGIN"
-      p "params[nonce] " + params[:nonce]
-      p "user.nonce " + user.nonce.to_s
+
+      logger.debug "Api::V1::UsersController.checklogin\n
+params[:nonce]=#{params[:nonce]}\n
+user.nonce=#{user.nonce}\n"
+
       encrypted_checklogin = checklogin_encrypted_value(params[:nonce], user.nonce, user.session_key)
       hmac = CryptoWrapper.get_hmac(user.session_key, encrypted_checklogin)
       render json: {checklogin: encrypted_checklogin, hmac: hmac}
     rescue Exception => e
-      puts e.message
+      logger.error "Api::V1::UsersController.checklogin when=Exception message=#{e.message}"
       head :bad_request
     end
   end
@@ -98,12 +104,7 @@ class Api::V1::UsersController < ApplicationController
   private
 
   def checklogin_encrypted_value(expected_nonce, nonce, session_key)
-    p "nonce + 1: " + (nonce + 1).to_s
-    p "session_key: " + session_key
-    p "decrypt expected_nonce: " + symmetric_decrypt(session_key, expected_nonce)
-
     encrypted_nonce = symmetric_encrypt((nonce + 1).to_s, session_key)
-    p "encrypted user.nonce + 1: " + encrypted_nonce
     value = symmetric_decrypt(session_key, encrypted_nonce) == (nonce + 1).to_s ? "HANDSHAKE_OK" : "HANDSHAKE_FAILED"
     symmetric_encrypt(value, session_key)
   end
@@ -118,7 +119,9 @@ class Api::V1::UsersController < ApplicationController
 
   def get_decrypted_params(session_key, params)
     decrypted_val = CryptoWrapper.symmetric_decrypt(session_key, params)
-    p "dec value: " + decrypted_val
+
+    logger.debug "Api::V1::UsersController.get_decrypted_params decrypted_val=#{decrypted_val}"
+
     ActiveSupport::JSON.decode decrypted_val 
   end
 
