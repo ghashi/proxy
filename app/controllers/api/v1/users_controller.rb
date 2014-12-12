@@ -8,17 +8,28 @@ class Api::V1::UsersController < ApplicationController
   def redirect
     begin
       user = User.find(params[:id])
+      p params[:hmac]
+      p params[:request]
+      p user.session_key
+      p CryptoWrapper.verify_hmac(params[:hmac], params[:request], user.session_key)
       return head :bad_request unless CryptoWrapper.verify_hmac(params[:hmac], params[:request], user.session_key)
+      p "teste(((((((((((((((((((7"
+      p params[:request]
       decrypted_params = get_decrypted_params user.session_key, params[:request]
+      p "teste(((((((((((((((((((8"
 
       response = make_request_with decrypted_params
       update_remaining_data_of user, response
-
-      encrypted_response = symmetric_encrypt(ActiveSupport::JSON.encode({remaining_data: user.remaining_data, content: response.body}), user.session_key)
+      encrypted_response = symmetric_encrypt(ActiveSupport::JSON.encode({remaining_data: user.remaining_data, content: Base64.encode64(response.body)}), user.session_key)
+      #encrypted_response = (ActiveSupport::JSON.encode({remaining_data: user.remaining_data, content: Base64.encode64(response.body)}))
       hmac = CryptoWrapper.get_hmac(user.session_key, encrypted_response)
 
+      p "teste(((((((((((((((((((9"
       render json: {response: encrypted_response, hmac: hmac}
-    rescue
+    rescue  Exception => e
+      p "DEU RUIM(((((((((((((((((((9"
+      puts e.message
+      p "DEU RUIM(((((((((((((((((((9"
       head :bad_request
     end
   end
@@ -102,12 +113,13 @@ class Api::V1::UsersController < ApplicationController
   end
 
   def symmetric_decrypt(session_key, value)
-    p "VAI ENTRAR ********************"
     CryptoWrapper.symmetric_decrypt(session_key, value)
   end
 
   def get_decrypted_params(session_key, params)
-    ActiveSupport::JSON.decode CryptoWrapper.symmetric_decrypt(session_key, params)
+    decrypted_val = CryptoWrapper.symmetric_decrypt(session_key, params)
+    p "dec value: " + decrypted_val
+    ActiveSupport::JSON.decode decrypted_val 
   end
 
   def make_request_with(decrypted_params)

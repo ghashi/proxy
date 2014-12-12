@@ -4,8 +4,6 @@
 #include "mss.h"
 #include "hmac.h"
 
-#define BUFFER_SIZE 300000
-
 static VALUE t_init(VALUE self){
   return self;
 }
@@ -79,21 +77,22 @@ static VALUE t_get_hmac(VALUE self, VALUE r_session_key, VALUE r_msg){
   get_hmac(msg, decoded_session_key, tag);
 
   buffer = malloc(2 * HMAC_TAG_SIZE);
-  base64encode(tag, HMAC_TAG_SIZE, buffer, BUFFER_SIZE);
+  base64encode(tag, HMAC_TAG_SIZE, buffer, 2 * HMAC_TAG_SIZE);
   str = rb_str_new2(buffer);
   free(buffer);
 
   return str;
 }
 
-static VALUE t_symmetric_decrypt(VALUE self, VALUE session_key, VALUE msg ){
+static VALUE t_symmetric_decrypt(VALUE self, VALUE r_session_key, VALUE msg ){
   printf("ENTROU ************************\n");
   unsigned char iv[AES_128_BLOCK_SIZE] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
   unsigned char *key;
   unsigned char *ciphertext;
   unsigned int  ciphertext_len;
   unsigned int  key_len;
-  unsigned char  buffer[BUFFER_SIZE];
+  unsigned char *plaintext;
+  unsigned int  plaintext_len;
   VALUE str;
   unsigned char *decoded_key;
   unsigned int  decoded_key_len;
@@ -104,7 +103,7 @@ static VALUE t_symmetric_decrypt(VALUE self, VALUE session_key, VALUE msg ){
   str = StringValue(msg);
   ciphertext = RSTRING_PTR(str);
   ciphertext_len = RSTRING_LEN(str);
-  str = StringValue(session_key);
+  str = StringValue(r_session_key);
   key = RSTRING_PTR(str);
   key_len = RSTRING_LEN(str);
 
@@ -122,33 +121,44 @@ static VALUE t_symmetric_decrypt(VALUE self, VALUE session_key, VALUE msg ){
   printf("decoded_key:  ");
   int i;
   printf("\n");
-  aes_128_cbc_decrypt(decoded_key, iv, decoded_ciphertext, decoded_ciphertext_len, buffer);
+
+  plaintext_len = ciphertext_len;
+  plaintext = malloc(plaintext_len);
+
+  printf("plaintext_len: %d", plaintext_len);
+
+  aes_128_cbc_decrypt(decoded_key, iv, decoded_ciphertext, decoded_ciphertext_len, plaintext);
   printf("depois decrypt_____________________\n");
 
   free(decoded_key);
   free(decoded_ciphertext);
 
-  return rb_str_new2(buffer);
+  return rb_str_new2(plaintext);
 }
 
-static VALUE t_symmetric_encrypt(VALUE self, VALUE nonce, VALUE session_key ){
+static VALUE t_symmetric_encrypt(VALUE self, VALUE r_plaintext, VALUE r_session_key ){
   unsigned char iv[AES_128_BLOCK_SIZE] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
   char *plaintext;
+  unsigned int  plaintext_len;
   unsigned char *key;
   unsigned int  key_len;
-  unsigned char ciphertext[BUFFER_SIZE];
+  unsigned char *ciphertext;
   unsigned int  ciphertext_len;
   unsigned char  *buffer;
   VALUE str;
   unsigned char *decoded_key;
   unsigned int   decoded_key_len;
 
-  str = StringValue(nonce);
+  str = StringValue(r_plaintext);
   plaintext = RSTRING_PTR(str);
-  str = StringValue(session_key);
+  plaintext_len = RSTRING_LEN(str);
+  str = StringValue(r_session_key);
   key = RSTRING_PTR(str);
   key_len = RSTRING_LEN(str);
-  memset(ciphertext, 0, BUFFER_SIZE);
+
+  ciphertext_len = plaintext_len + AES_128_BLOCK_SIZE;
+  ciphertext = malloc(ciphertext_len);
+  memset(ciphertext, 0, ciphertext_len);
 
   decoded_key = malloc(key_len);
   decoded_key_len = key_len;
