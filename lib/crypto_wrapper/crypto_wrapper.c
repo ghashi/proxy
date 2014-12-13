@@ -85,7 +85,6 @@ static VALUE t_get_hmac(VALUE self, VALUE r_session_key, VALUE r_msg){
 }
 
 static VALUE t_symmetric_decrypt(VALUE self, VALUE r_session_key, VALUE msg ){
-  printf("ENTROU ************************\n");
   unsigned char iv[AES_128_BLOCK_SIZE] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
   unsigned char *key;
   unsigned char *ciphertext;
@@ -112,23 +111,13 @@ static VALUE t_symmetric_decrypt(VALUE self, VALUE r_session_key, VALUE msg ){
   decoded_key        = malloc(key_len);
   decoded_key_len    = key_len;
 
-  printf("antes decode _____________________\n");
   base64decode(ciphertext, ciphertext_len, decoded_ciphertext, &decoded_ciphertext_len);
   base64decode(key, key_len, decoded_key, &decoded_key_len);
-  printf("depois decode _____________________\n");
-
-  printf("antes decrypt _____________________\n");
-  printf("decoded_key:  ");
-  int i;
-  printf("\n");
 
   plaintext_len = ciphertext_len;
   plaintext = malloc(plaintext_len);
 
-  printf("plaintext_len: %d", plaintext_len);
-
   aes_128_cbc_decrypt(decoded_key, iv, decoded_ciphertext, decoded_ciphertext_len, plaintext);
-  printf("depois decrypt_____________________\n");
 
   free(decoded_key);
   free(decoded_ciphertext);
